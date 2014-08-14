@@ -1,0 +1,17 @@
+Re: EV3 bluetooth connexion with android
+
+OPTIONS
+11-06-2013 05:01 PM
+I get the same behaviour with my Samsung Galaxy (Android 4). However, I found a workaround to get the commander app working with the EV3. Try the following steps.
+ 
+1. Unpair the EV3 from the Android device in case they are paired.
+2. Goto Bluetooth options on the Android an initiate Bluetooth pairing.
+3. On EV3 accept the pairing request but don't enter the passcode yet
+4. Start up the comannder app and choose the desired model.
+5 On the EV3 enter the passcode (e.g. 1234).
+6. On the Android enter the passcode as well (e.g. 1234).
+7. Immediately press play in the commander app.
+8. The commander app will change to the remote control screen instead of initiating another bluetooth pairing.
+ 
+Unfortunately the above steps have to be repeated every time you start up the commander app or if you want the change the EV3 model.
+ 

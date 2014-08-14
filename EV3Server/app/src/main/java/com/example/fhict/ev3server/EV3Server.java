@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.example.fhict.bluetoothchat;
+package com.example.fhict.ev3server;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -38,15 +39,22 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * This is the main Activity that displays the current chat session.
  */
-public class BluetoothChat extends Activity {
+public class EV3Server extends Activity {
     // Debugging
-    private static final String TAG = "BluetoothChat";
+    private static final String TAG = "EV3Server";
     private static final boolean D = true;
+    private WebServer server;
 
     // Message types sent from the BluetoothChatService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
@@ -108,6 +116,16 @@ public class BluetoothChat extends Activity {
             finish();
             return;
         }
+
+        // Start web server
+        server = new WebServer();
+        try {
+            Toast.makeText(getApplicationContext(), "going to start server", Toast.LENGTH_LONG).show();
+            server.start();
+        } catch (IOException ioe) {
+            Log.w("Httpd", "The server could not start.");
+        }
+        Log.w("Httpd", "Web server initialized.");
     }
 
     @Override
@@ -173,15 +191,15 @@ public class BluetoothChat extends Activity {
                 sendMessage("cmd:forward");
             }
         });
-        mButtonForward = (Button) findViewById(R.id.button_backward);
-        mButtonForward.setOnClickListener(new OnClickListener() {
+        mButtonBackward = (Button) findViewById(R.id.button_backward);
+        mButtonBackward.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
                 sendMessage("cmd:backward");
             }
         });
-        mButtonForward = (Button) findViewById(R.id.button_stop);
-        mButtonForward.setOnClickListener(new OnClickListener() {
+        mButtonStop = (Button) findViewById(R.id.button_stop);
+        mButtonStop.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
                 sendMessage("cmd:stop");
@@ -213,6 +231,8 @@ public class BluetoothChat extends Activity {
         // Stop the Bluetooth chat services
         if (mChatService != null) mChatService.stop();
         if (D) Log.e(TAG, "--- ON DESTROY ---");
+        if (server != null)
+            server.stop();
     }
 
     private void ensureDiscoverable() {
@@ -425,5 +445,63 @@ public class BluetoothChat extends Activity {
         }
         return false;
     }
+
+    public class WebServer extends NanoHTTPD {
+        public WebServer() {
+            super(44444);
+        }
+
+        @Override
+        public Response serve(IHTTPSession session) {
+            Method method = session.getMethod();
+            String uri = session.getUri();
+            System.out.println(method + " '" + uri + "' ");
+
+            String answer = "";
+
+            Map<String, String> parms = session.getParms();
+
+
+            try {
+                // Open file from SD Card
+                File root = Environment.getExternalStorageDirectory();
+                FileReader index = new FileReader(root.getAbsolutePath() +
+                        "/www/index.html");
+                BufferedReader reader = new BufferedReader(index);
+                String line = "";
+                while ((line = reader.readLine()) != null) {
+                    answer += line;
+                }
+                reader.close();
+
+            } catch (IOException ioe) {
+                Log.w("Httpd", ioe.toString());
+            }
+
+            if (parms.get("cmd") != null) {
+                // Send the cmd received from the client to the EV3
+                String answerWithFeedback = answer.replace("feedback", parms.get("cmd"));
+                // Run on UI thread to avoid "Only the original thread that created a view hierarchy can touch its views" error
+                // or "Can't create handler inside thread that has not called Looper.prepare()" error
+                try {
+                    final String cmdToSend = parms.get("cmd");
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            sendMessage(cmdToSend);
+                        }
+                    });
+                } catch (Exception e) {
+                    answerWithFeedback = answer.replace("feedback", e.getMessage());
+                }
+
+                return new NanoHTTPD.Response(answerWithFeedback);
+            } else {
+                return new NanoHTTPD.Response(answer);
+            }
+        }
+
+    }
+
 
 }
