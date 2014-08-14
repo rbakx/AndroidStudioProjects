@@ -1,0 +1,10 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="android:Theme.Holo.Light.DarkActionBar">
+        <!-- ReneB: line below added to prevent custom title error -->
+        <item name="android:windowActionBar">false</item>
+        <!-- Customize your theme here. -->
+    </style>
+
+</resources>
