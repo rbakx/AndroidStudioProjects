@@ -46,6 +46,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.io.InputStream;
+import java.io.FileInputStream;
 
 /**
  * This is the main Activity that displays the current chat session.
@@ -459,9 +461,82 @@ public class EV3Server extends Activity {
 
             String answer = "";
 
+            // Remove comments below for debugging purposes, this will show the uri
+            /*
+            final String uriFinal = uri;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), "uri = " + uriFinal, Toast.LENGTH_LONG).show();
+                }
+            });
+            */
+
+            // Handle jpg images
+            if (uri.contains(".jpg")) {
+                try {
+
+                    File root = Environment.getExternalStorageDirectory();
+                    InputStream mbuffer = new FileInputStream(root.getAbsolutePath() + "/www" + uri);
+                    return new NanoHTTPD.Response(Response.Status.OK, MIME_JPG, mbuffer);
+
+                } catch (IOException ioe) {
+                    final IOException ioeFinal = ioe;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(), "exception: " + ioeFinal.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    Log.w("Httpd", ioe.toString());
+                    return new NanoHTTPD.Response(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
+                }
+            }
+
+            // Handle png images
+            if (uri.contains(".png")) {
+                try {
+
+                    File root = Environment.getExternalStorageDirectory();
+                    InputStream mbuffer = new FileInputStream(root.getAbsolutePath() + "/www" + uri);
+                    return new NanoHTTPD.Response(Response.Status.OK, MIME_PNG, mbuffer);
+
+                } catch (IOException ioe) {
+                    final IOException ioeFinal = ioe;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(), "exception: " + ioeFinal.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    Log.w("Httpd", ioe.toString());
+                    return new NanoHTTPD.Response(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
+                }
+            }
+
+            // Handle javascript
+            if (uri.contains(".js")) {
+                try {
+
+                    File root = Environment.getExternalStorageDirectory();
+                    InputStream mbuffer = new FileInputStream(root.getAbsolutePath() + "/www" + uri);
+                    return new NanoHTTPD.Response(Response.Status.OK, MIME_JS, mbuffer);
+
+                } catch (IOException ioe) {
+                    final IOException ioeFinal = ioe;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(), "exception: " + ioeFinal.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    Log.w("Httpd", ioe.toString());
+                    return new NanoHTTPD.Response(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
+                }
+            }
+
+            // Handle html
             Map<String, String> parms = session.getParms();
-
-
             try {
                 // Open file from SD Card
                 File root = Environment.getExternalStorageDirectory();
@@ -495,12 +570,11 @@ public class EV3Server extends Activity {
                     answerWithFeedback = answer.replace("feedback", e.getMessage());
                 }
 
-                return new NanoHTTPD.Response(answerWithFeedback);
+                return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
             } else {
-                return new NanoHTTPD.Response(answer);
+                return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answer);
             }
         }
-
     }
 
 

@@ -97,6 +97,18 @@ public abstract class NanoHTTPD {
      */
     public static final String MIME_HTML = "text/html";
     /**
+     * Common mime type for dynamic content: png
+     */
+    public static final String MIME_PNG = "image/png";
+    /**
+     * Common mime type for dynamic content: jpg
+     */
+    public static final String MIME_JPG = "image/jpeg";
+    /**
+     * Common mime type for dynamic content: javascript
+     */
+    public static final String MIME_JS = "application/javascript";
+    /**
      * Pseudo-Parameter to use to store the actual query string in the parameters map for later re-processing.
      */
     private static final String QUERY_STRING_PARAMETER = "NanoHttpd.QUERY_STRING";
