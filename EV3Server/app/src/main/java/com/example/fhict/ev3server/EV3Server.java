@@ -120,7 +120,7 @@ public class EV3Server extends Activity {
         // Start web server
         server = new WebServer();
         try {
-            Toast.makeText(getApplicationContext(), "going to start server", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "starting server", Toast.LENGTH_LONG).show();
             server.start();
         } catch (IOException ioe) {
             Log.w("Httpd", "The server could not start.");
@@ -180,7 +180,7 @@ public class EV3Server extends Activity {
                 // Send a message using content of the edit text widget
                 TextView view = (TextView) findViewById(R.id.edit_text_out);
                 String message = view.getText().toString();
-                sendMessage(message);
+                sendEV3Message(message);
             }
         });
         //ReneB: add cmd button listeners
@@ -188,21 +188,21 @@ public class EV3Server extends Activity {
         mButtonForward.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
-                sendMessage("cmd:forward");
+                sendEV3Message("cmd:forward");
             }
         });
         mButtonBackward = (Button) findViewById(R.id.button_backward);
         mButtonBackward.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
-                sendMessage("cmd:backward");
+                sendEV3Message("cmd:backward");
             }
         });
         mButtonStop = (Button) findViewById(R.id.button_stop);
         mButtonStop.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
-                sendMessage("cmd:stop");
+                sendEV3Message("cmd:stop");
             }
         });
 
@@ -246,11 +246,11 @@ public class EV3Server extends Activity {
     }
 
     /**
-     * Sends a message.
+     * Sends a EV3 message.
      *
      * @param message A string of text to send.
      */
-    private void sendMessage(String message) {
+    private void sendEV3Message(String message) {
         // Check that we're actually connected before trying anything
         if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
             Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
@@ -339,7 +339,7 @@ public class EV3Server extends Activity {
                     // If the action is a key-up event on the return key, send the message
                     if (actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_UP) {
                         String message = view.getText().toString();
-                        sendMessage(message);
+                        sendEV3Message(message);
                     }
                     if (D) Log.i(TAG, "END onEditorAction");
                     return true;
@@ -488,7 +488,7 @@ public class EV3Server extends Activity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            sendMessage(cmdToSend);
+                            sendEV3Message(cmdToSend);
                         }
                     });
                 } catch (Exception e) {
