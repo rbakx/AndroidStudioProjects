@@ -97,6 +97,10 @@ public abstract class NanoHTTPD {
      */
     public static final String MIME_HTML = "text/html";
     /**
+     * Common mime type for dynamic content: css
+     */
+    public static final String MIME_CSS = "text/css";
+    /**
      * Common mime type for dynamic content: png
      */
     public static final String MIME_PNG = "image/png";

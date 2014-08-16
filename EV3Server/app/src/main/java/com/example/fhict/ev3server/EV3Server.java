@@ -50,7 +50,7 @@ import java.io.InputStream;
 import java.io.FileInputStream;
 
 /**
- * This is the main Activity that displays the current chat session.
+ * This is the main Activity that displays the current chat session
  */
 public class EV3Server extends Activity {
     // Debugging
@@ -472,6 +472,27 @@ public class EV3Server extends Activity {
             });
             */
 
+            // Handle style sheets
+            if (uri.contains(".css")) {
+                try {
+
+                    File root = Environment.getExternalStorageDirectory();
+                    InputStream mbuffer = new FileInputStream(root.getAbsolutePath() + "/www" + uri);
+                    return new NanoHTTPD.Response(Response.Status.OK, MIME_CSS, mbuffer);
+
+                } catch (IOException ioe) {
+                    final IOException ioeFinal = ioe;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(), "exception: " + ioeFinal.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    Log.w("Httpd", ioe.toString());
+                    return new NanoHTTPD.Response(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
+                }
+            }
+
             // Handle jpg images
             if (uri.contains(".jpg")) {
                 try {
@@ -479,7 +500,6 @@ public class EV3Server extends Activity {
                     File root = Environment.getExternalStorageDirectory();
                     InputStream mbuffer = new FileInputStream(root.getAbsolutePath() + "/www" + uri);
                     return new NanoHTTPD.Response(Response.Status.OK, MIME_JPG, mbuffer);
-
                 } catch (IOException ioe) {
                     final IOException ioeFinal = ioe;
                     runOnUiThread(new Runnable() {
@@ -500,7 +520,6 @@ public class EV3Server extends Activity {
                     File root = Environment.getExternalStorageDirectory();
                     InputStream mbuffer = new FileInputStream(root.getAbsolutePath() + "/www" + uri);
                     return new NanoHTTPD.Response(Response.Status.OK, MIME_PNG, mbuffer);
-
                 } catch (IOException ioe) {
                     final IOException ioeFinal = ioe;
                     runOnUiThread(new Runnable() {
@@ -521,7 +540,6 @@ public class EV3Server extends Activity {
                     File root = Environment.getExternalStorageDirectory();
                     InputStream mbuffer = new FileInputStream(root.getAbsolutePath() + "/www" + uri);
                     return new NanoHTTPD.Response(Response.Status.OK, MIME_JS, mbuffer);
-
                 } catch (IOException ioe) {
                     final IOException ioeFinal = ioe;
                     runOnUiThread(new Runnable() {
@@ -535,7 +553,7 @@ public class EV3Server extends Activity {
                 }
             }
 
-            // Handle html
+            // Get the index.html to handle the other responses
             Map<String, String> parms = session.getParms();
             try {
                 // Open file from SD Card
@@ -548,13 +566,14 @@ public class EV3Server extends Activity {
                     answer += line;
                 }
                 reader.close();
-
             } catch (IOException ioe) {
                 Log.w("Httpd", ioe.toString());
             }
 
+            // Handle html button actions with name 'cmd'
             if (parms.get("cmd") != null) {
                 // Send the cmd received from the client to the EV3
+                // Construct answerWithFeedback to have a feedback string sent to the client
                 String answerWithFeedback = answer.replace("feedback", parms.get("cmd"));
                 // Run on UI thread to avoid "Only the original thread that created a view hierarchy can touch its views" error
                 // or "Can't create handler inside thread that has not called Looper.prepare()" error
@@ -569,11 +588,14 @@ public class EV3Server extends Activity {
                 } catch (Exception e) {
                     answerWithFeedback = answer.replace("feedback", e.getMessage());
                 }
-
-                return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
-            } else {
-                return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answer);
+                // use 'NO_CONTENT' return status to prevent a page load each time a button is pressed
+                // So answerWithFeedback is not used now
+                // In the future it is possible to use answerWithFeedback again in combination with 'PARTIAL_CONTENT'
+                return new NanoHTTPD.Response(Response.Status.NO_CONTENT, MIME_HTML, answerWithFeedback);
             }
+
+            // Refresh
+            return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answer);
         }
     }
 
