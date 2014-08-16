@@ -453,6 +453,8 @@ public class EV3Server extends Activity {
             super(44444);
         }
 
+        private String feedbackString = "?"; // To send feedback to the client, PHP is not supported by NanoHttpd
+
         @Override
         public Response serve(IHTTPSession session) {
             Method method = session.getMethod();
@@ -570,12 +572,17 @@ public class EV3Server extends Activity {
                 Log.w("Httpd", ioe.toString());
             }
 
+            // Construct answerWithFeedback to have a feedback string sent to the client
+            // Normally one would use PHP, but this is not supported by NanoHttpd
+            // Only update feedback if there is new feedback, this way a later refresh of the page will still show the last feedback
+            if (parms.get("cmd") != null) {
+                feedbackString = "cmd sent to EV3 = " + parms.get("cmd");
+            }
+            String answerWithFeedback = answer.replace("feedbackstring", feedbackString);
+
             // Handle html button actions with name 'cmd' and send feedback
             if (parms.get("cmd") != null) {
                 // Send the cmd received from the client to the EV3
-                // Construct answerWithFeedback to have a feedback string sent to the client
-                // The  official way for this would be to use PHP but this is not supported by NanoHttpd
-                String answerWithFeedback = answer.replace("feedback", parms.get("cmd"));
                 // Run on UI thread to avoid "Only the original thread that created a view hierarchy can touch its views" error
                 // or "Can't create handler inside thread that has not called Looper.prepare()" error
                 try {
@@ -593,7 +600,7 @@ public class EV3Server extends Activity {
             }
 
             // Refresh
-            return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answer);
+            return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
         }
     }
 
