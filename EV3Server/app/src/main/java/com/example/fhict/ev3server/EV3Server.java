@@ -570,10 +570,11 @@ public class EV3Server extends Activity {
                 Log.w("Httpd", ioe.toString());
             }
 
-            // Handle html button actions with name 'cmd'
+            // Handle html button actions with name 'cmd' and send feedback
             if (parms.get("cmd") != null) {
                 // Send the cmd received from the client to the EV3
                 // Construct answerWithFeedback to have a feedback string sent to the client
+                // The  official way for this would be to use PHP but this is not supported by NanoHttpd
                 String answerWithFeedback = answer.replace("feedback", parms.get("cmd"));
                 // Run on UI thread to avoid "Only the original thread that created a view hierarchy can touch its views" error
                 // or "Can't create handler inside thread that has not called Looper.prepare()" error
@@ -588,10 +589,7 @@ public class EV3Server extends Activity {
                 } catch (Exception e) {
                     answerWithFeedback = answer.replace("feedback", e.getMessage());
                 }
-                // use 'NO_CONTENT' return status to prevent a page load each time a button is pressed
-                // So answerWithFeedback is not used now
-                // In the future it is possible to use answerWithFeedback again in combination with 'PARTIAL_CONTENT'
-                return new NanoHTTPD.Response(Response.Status.NO_CONTENT, MIME_HTML, answerWithFeedback);
+                return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
             }
 
             // Refresh
