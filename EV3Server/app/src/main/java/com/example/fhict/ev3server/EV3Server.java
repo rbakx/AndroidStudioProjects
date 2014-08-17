@@ -192,21 +192,21 @@ public class EV3Server extends Activity {
         mButtonForward.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
-                sendEV3Message("cmd:forward");
+                sendEV3Message("ev3cmd:forward");
             }
         });
         mButtonBackward = (Button) findViewById(R.id.button_backward);
         mButtonBackward.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
-                sendEV3Message("cmd:backward");
+                sendEV3Message("ev3cmd:backward");
             }
         });
         mButtonStop = (Button) findViewById(R.id.button_stop);
         mButtonStop.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
-                sendEV3Message("cmd:stop");
+                sendEV3Message("ev3cmd:stop");
             }
         });
 
@@ -587,7 +587,7 @@ public class EV3Server extends Activity {
             // the real message part starts with a html <br> character.
             // This is to be taken care of in the EV3 program!
             // This way also the naim of the EV3 message box is removed.
-            if (parms.get("cmd") != null) {
+            if (parms.get("ev3cmd") != null) {
                 String messageFromEv3Readable;
                 if (rawMessageFromEv3 != null) {
                     int idx = rawMessageFromEv3.indexOf("<");
@@ -605,17 +605,17 @@ public class EV3Server extends Activity {
             }
             String answerWithFeedback = answer.replace("feedbackstring", feedbackString);
 
-            // Handle html button actions with name 'cmd' and send feedback
-            if (parms.get("cmd") != null) {
+            // Handle html button actions with name 'ev3cmd' and send feedback
+            if (parms.get("ev3cmd") != null) {
                 // Send the cmd received from the client to the EV3
                 // Run on UI thread to avoid "Only the original thread that created a view hierarchy can touch its views" error
                 // or "Can't create handler inside thread that has not called Looper.prepare()" error
                 try {
-                    final String cmdToSend = parms.get("cmd");
+                    final String ev3cmdToSend = parms.get("ev3cmd");
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            sendEV3Message(cmdToSend);
+                            sendEV3Message(ev3cmdToSend);
                         }
                     });
                 } catch (Exception e) {
@@ -624,10 +624,31 @@ public class EV3Server extends Activity {
                 return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
             }
 
+            // Handle html button actions with name 'servercmd' and send feedback
+            if (parms.get("servercmd") != null) {
+                String serverCmd = parms.get("servercmd");
+                if (serverCmd.contains("servercmd:connect-ev3")) {
+                    // Get BlueTooth address from the command which are the last 17 characters
+                    String btAddr = serverCmd.substring(serverCmd.length() - 17);
+                    try {
+                        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(btAddr);
+                        //Attempt to connect to the device
+                        mChatService.connect(device);
+                    } catch (Exception e) {
+                        final String msg = e.getMessage();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplicationContext(), "ecxeption" + msg, Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
+                }
+                return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
+            }
+
             // Refresh
             return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
         }
     }
-
-
 }
