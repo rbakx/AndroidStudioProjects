@@ -57,6 +57,8 @@ public class EV3Server extends Activity {
     private static final String TAG = "EV3Server";
     private static final boolean D = true;
     private WebServer server;
+    private String bluetoothStatus = "?"; // to report back to client
+    private String rawMessageFromEv3;  // to report back to client
 
     // Message types sent from the BluetoothChatService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
@@ -360,13 +362,16 @@ public class EV3Server extends Activity {
                             mTitle.setText(R.string.title_connected_to);
                             mTitle.append(mConnectedDeviceName);
                             mConversationArrayAdapter.clear();
+                            bluetoothStatus = "connected";
                             break;
                         case BluetoothChatService.STATE_CONNECTING:
                             mTitle.setText(R.string.title_connecting);
+                            bluetoothStatus = "connecting";
                             break;
                         case BluetoothChatService.STATE_LISTEN:
                         case BluetoothChatService.STATE_NONE:
                             mTitle.setText(R.string.title_not_connected);
+                            bluetoothStatus = "not connected";
                             break;
                     }
                     break;
@@ -381,6 +386,7 @@ public class EV3Server extends Activity {
                     // construct a string from the valid bytes in the buffer
                     String readMessage = new String(readBuf, 0, msg.arg1);
                     mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
+                    rawMessageFromEv3 = readMessage;
                     break;
                 case MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -572,11 +578,30 @@ public class EV3Server extends Activity {
                 Log.w("Httpd", ioe.toString());
             }
 
-            // Construct answerWithFeedback to have a feedback string sent to the client
-            // Normally one would use PHP, but this is not supported by NanoHttpd
-            // Only update feedback if there is new feedback, this way a later refresh of the page will still show the last feedback
+            // Construct answerWithFeedback to have a feedback string sent to the client.
+            // Normally one would use PHP, but this is not supported by NanoHttpd.
+            // Only update feedback if there is new feedback, this way a later refresh of the page will still show the last feedback.
+            // First construct the feedback message from the EV3.
+            // Because the raw message contains unknown characters at the start these are removed.
+            // This is done by looking for the '<' character because it is assumed that
+            // the real message part starts with a html <br> character.
+            // This is to be taken care of in the EV3 program!
+            // This way also the naim of the EV3 message box is removed.
             if (parms.get("cmd") != null) {
-                feedbackString = "cmd sent to EV3 = " + parms.get("cmd");
+                String messageFromEv3Readable;
+                if (rawMessageFromEv3 != null) {
+                    int idx = rawMessageFromEv3.indexOf("<");
+                    if (idx == -1) {  // display raw message if there is no '<'
+                        idx = 0;
+                    }
+                    messageFromEv3Readable = rawMessageFromEv3.substring(idx);
+                } else {
+                    messageFromEv3Readable = "?";
+                }
+
+                feedbackString = "<br>cmd sent to EV3 = " + parms.get("cmd") +
+                        "<br>bluetooth status = " + bluetoothStatus +
+                        "<br><b>EV3 status:</b>" + messageFromEv3Readable;
             }
             String answerWithFeedback = answer.replace("feedbackstring", feedbackString);
 
