@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -39,6 +40,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.IntentFilter;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -459,7 +461,7 @@ public class EV3Server extends Activity {
             super(44444);
         }
 
-        private String feedbackString = "-"; // To send feedback to the client, PHP is not supported by NanoHttpd
+        private String feedbackString = "-"; // To send feedback to the client
 
         @Override
         public Response serve(IHTTPSession session) {
@@ -578,15 +580,36 @@ public class EV3Server extends Activity {
                 Log.w("Httpd", ioe.toString());
             }
 
-            // Construct answerWithFeedback to have a feedback string sent to the client.
-            // Normally one would use PHP, but this is not supported by NanoHttpd.
+            // Construct a feedback string to sent back to the client.
             // Only update feedback if there is new feedback, this way a later refresh of the page will still show the last feedback.
-            // First construct the feedback message from the EV3.
+            //
+            // Construct the feedback containing battery level and charging status
+            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            Intent batteryStatus = getApplicationContext().registerReceiver(null, ifilter);
+            // Are we charging / charged?
+            int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL;
+            int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            float batteryPct = level / (float) scale;
+
+            String batteryLevel;
+            String charging;
+            batteryLevel = String.format("%.0f", batteryPct * 100);
+            if (isCharging == true) {
+                charging = "yes";
+            } else {
+                charging = "no";
+
+            }
+
+            // Construct the feedback containing the message from the EV3.
             // Because the raw message contains unknown characters at the start these are removed.
             // This is done by looking for the '<' character because it is assumed that
             // the real message part starts with a html <br> character.
             // This is to be taken care of in the EV3 program!
-            // This way also the naim of the EV3 message box is removed.
+            // This way also the name of the EV3 message box is removed.
             String ev3Cmd = parms.get("ev3cmd");
             String messageFromEv3Readable = null;
             if (rawMessageFromEv3 != null) {
@@ -598,16 +621,19 @@ public class EV3Server extends Activity {
             } else {
                 messageFromEv3Readable = "-";
             }
-
             // If no ev3 cmd, fill in "-" in the feedback string
-            String str1;
+            String tmpEv3Cmd;
             if (ev3Cmd == null) {
-                str1 = "-";
+                tmpEv3Cmd = "-";
             } else {
-                str1 = ev3Cmd;
+                tmpEv3Cmd = ev3Cmd;
             }
-            feedbackString = "<br>cmd sent to EV3 = " + str1 +
+
+            // Now compose the complete feedback string
+            feedbackString = "<br>cmd sent to EV3 = " + tmpEv3Cmd +
                     "<br>bluetooth status = " + bluetoothStatus +
+                    "<br>battery level = " + batteryLevel +
+                    "<br>charging = " + charging +
                     "<br><b>EV3 status:</b>" + messageFromEv3Readable;
 
             String answerWithFeedback = answer.replace("feedbackstring", feedbackString);
