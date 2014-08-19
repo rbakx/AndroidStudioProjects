@@ -19,7 +19,9 @@ package com.example.fhict.ev3server;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Environment;
@@ -60,7 +62,7 @@ public class EV3Server extends Activity {
     private static final boolean D = true;
     private WebServer server;
     private String bluetoothStatus = "-"; // to report back to client
-    private String rawMessageFromEv3;  // to report back to client
+    private String rawMessageFromEv3 = "";  // to report back to client
 
     // Message types sent from the BluetoothChatService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
@@ -456,6 +458,42 @@ public class EV3Server extends Activity {
         return false;
     }
 
+    private static String[] getBatteryStatus(Context context) {
+        String[] returnStatus = new String[]{"-", "-"};
+        try {
+            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            Intent batteryStatus = context.registerReceiver(null, ifilter);
+            // Are we charging / charged?
+            int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL;
+            int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            float batteryPct = level / (float) scale;
+
+            returnStatus[0] = String.format("%.0f", batteryPct * 100);
+            if (isCharging == true) {
+                returnStatus[1] = "yes";
+            } else {
+                returnStatus[1] = "no";
+            }
+            return returnStatus;
+        } catch (Exception e) {
+            return returnStatus;
+        }
+    }
+
+    private static String getWifiStrength(Context context) {
+        try {
+            WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            int rssi = wifiManager.getConnectionInfo().getRssi();
+            int percentage = wifiManager.calculateSignalLevel(rssi, 100);
+            return Integer.toString(percentage);
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
     public class WebServer extends NanoHTTPD {
         public WebServer() {
             super(44444);
@@ -581,28 +619,13 @@ public class EV3Server extends Activity {
             }
 
             // Construct a feedback string to sent back to the client.
-            // Only update feedback if there is new feedback, this way a later refresh of the page will still show the last feedback.
             //
             // Construct the feedback containing battery level and charging status
-            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-            Intent batteryStatus = getApplicationContext().registerReceiver(null, ifilter);
-            // Are we charging / charged?
-            int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-            boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                    status == BatteryManager.BATTERY_STATUS_FULL;
-            int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-            int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-            float batteryPct = level / (float) scale;
+            String[] batteryStatus = new String[2];
+            batteryStatus = getBatteryStatus(getApplicationContext());
 
-            String batteryLevel;
-            String charging;
-            batteryLevel = String.format("%.0f", batteryPct * 100);
-            if (isCharging == true) {
-                charging = "yes";
-            } else {
-                charging = "no";
-
-            }
+            // Construct the feedback containing wifi strength
+            String wifiStrengthPercentage = getWifiStrength(getApplicationContext());
 
             // Construct the feedback containing the message from the EV3.
             // Because the raw message contains unknown characters at the start these are removed.
@@ -611,16 +634,22 @@ public class EV3Server extends Activity {
             // This is to be taken care of in the EV3 program!
             // This way also the name of the EV3 message box is removed.
             String ev3Cmd = parms.get("ev3cmd");
-            String messageFromEv3Readable = null;
-            if (rawMessageFromEv3 != null) {
+            String messageFromEv3Readable = "";
+            if (rawMessageFromEv3 != "") {
                 int idx = rawMessageFromEv3.indexOf("<");
                 if (idx == -1) {  // display raw message if there is no '<'
                     idx = 0;
                 }
                 messageFromEv3Readable = rawMessageFromEv3.substring(idx);
-            } else {
-                messageFromEv3Readable = "-";
+
             }
+            // rawMessageFromEv3 keeps its value, which is ok as we want to keep showing
+            // the last message of the EV3 until a new message arrives.
+            // However, we reset it to "" when the connection to the EV3 is lost.
+            if (!bluetoothStatus.equals("connected")) {
+                rawMessageFromEv3 = "";
+            }
+
             // If no ev3 cmd, fill in "-" in the feedback string
             String tmpEv3Cmd;
             if (ev3Cmd == null) {
@@ -630,11 +659,14 @@ public class EV3Server extends Activity {
             }
 
             // Now compose the complete feedback string
-            feedbackString = "<br>cmd sent to EV3 = " + tmpEv3Cmd +
-                    "<br>bluetooth status = " + bluetoothStatus +
-                    "<br>battery level = " + batteryLevel +
-                    "<br>charging = " + charging +
-                    "<br><b>EV3 status:</b>" + messageFromEv3Readable;
+            feedbackString =
+                    "<br>battery level = " + batteryStatus[0] +
+                            "<br>charging = " + batteryStatus[1] +
+                            "<br>wifi strength = " + wifiStrengthPercentage +
+                            "<br>cmd sent to EV3 = " + tmpEv3Cmd +
+                            "<br><b>EV3 status:</b>" +
+                            "<br>bluetooth status = " + bluetoothStatus +
+                            messageFromEv3Readable; // messageFromEv3Readable starts with <br>
 
             String answerWithFeedback = answer.replace("feedbackstring", feedbackString);
 

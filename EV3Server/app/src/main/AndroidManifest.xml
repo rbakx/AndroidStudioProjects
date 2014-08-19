@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2009 The Android Open Source Project
+<?xml version="1.0" encoding="utf-8"?><!-- Copyright (C) 2009 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -12,30 +11,33 @@
      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      See the License for the specific language governing permissions and
      limitations under the License.
--->
-<!-- ReneB: package namespace below adapted to match correct location -->
-<!-- ReneB: theme below added to prevent custom title error -->
+--><!-- ReneB: package namespace below adapted to match correct location --><!-- ReneB: theme below added to prevent custom title error -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.fhict.ev3server" >
+    package="com.example.fhict.ev3server">
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-    <application android:label="@string/app_name"
-                 android:icon="@drawable/app_icon" >
-        <activity android:name=".EV3Server"
-                  android:label="@string/app_name"
-                  android:theme="@style/AppTheme"
-                  android:configChanges="orientation|keyboardHidden">
+    <application
+        android:icon="@drawable/app_icon"
+        android:label="@string/app_name">
+        <activity
+            android:name=".EV3Server"
+            android:configChanges="orientation|keyboardHidden"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".DeviceListActivity"
-                  android:label="@string/select_device"
-                  android:theme="@android:style/Theme.Dialog"
-                  android:configChanges="orientation|keyboardHidden" />
+        <activity
+            android:name=".DeviceListActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:label="@string/select_device"
+            android:theme="@android:style/Theme.Dialog" />
     </application>
 </manifest>
