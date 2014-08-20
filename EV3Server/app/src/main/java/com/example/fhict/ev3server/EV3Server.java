@@ -21,6 +21,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.Camera;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
@@ -120,7 +121,7 @@ public class EV3Server extends Activity {
 
         // If the adapter is null, then Bluetooth is not supported
         if (mBluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -128,7 +129,7 @@ public class EV3Server extends Activity {
         // Start web server
         server = new WebServer();
         try {
-            Toast.makeText(getApplicationContext(), "starting server", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "starting server", Toast.LENGTH_SHORT).show();
             server.start();
         } catch (IOException ioe) {
             Log.w("Httpd", "The server could not start.");
@@ -494,6 +495,42 @@ public class EV3Server extends Activity {
         }
     }
 
+    private Camera cam = null;
+
+    void lightOn() {
+        try {
+            cam = Camera.open();
+            Camera.Parameters p = cam.getParameters();
+            p.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+            cam.setParameters(p);
+            cam.startPreview();
+        } catch (Exception e) {
+            final Exception eFinal = e;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), "exception: " + eFinal.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    }
+
+    void lightOff() {
+        try {
+            cam.stopPreview();
+            cam.release();
+        } catch (Exception e) {
+            final Exception eFinal = e;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), "exception: " + eFinal.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            });
+
+        }
+    }
+
     public class WebServer extends NanoHTTPD {
         public WebServer() {
             super(44444);
@@ -515,7 +552,7 @@ public class EV3Server extends Activity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    Toast.makeText(getApplicationContext(), "uri = " + uriFinal, Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "uri = " + uriFinal, Toast.LENGTH_SHORT).show();
                 }
             });
             */
@@ -601,119 +638,154 @@ public class EV3Server extends Activity {
                 }
             }
 
-            // Get the index.html to handle the other responses
-            Map<String, String> parms = session.getParms();
-            try {
-                // Open file from SD Card
-                File root = Environment.getExternalStorageDirectory();
-                FileReader index = new FileReader(root.getAbsolutePath() +
-                        "/www/index.html");
-                BufferedReader reader = new BufferedReader(index);
-                String line = "";
-                while ((line = reader.readLine()) != null) {
-                    answer += line;
-                }
-                reader.close();
-            } catch (IOException ioe) {
-                Log.w("Httpd", ioe.toString());
-            }
-
-            // Construct a feedback string to sent back to the client.
-            //
-            // Construct the feedback containing battery level and charging status
-            String[] batteryStatus = new String[2];
-            batteryStatus = getBatteryStatus(getApplicationContext());
-
-            // Construct the feedback containing wifi strength
-            String wifiStrengthPercentage = getWifiStrength(getApplicationContext());
-
-            // Construct the feedback containing the message from the EV3.
-            // Because the raw message contains unknown characters at the start these are removed.
-            // This is done by looking for the '<' character because it is assumed that
-            // the real message part starts with a html <br> character.
-            // This is to be taken care of in the EV3 program!
-            // This way also the name of the EV3 message box is removed.
-            String ev3Cmd = parms.get("ev3cmd");
-            String messageFromEv3Readable = "";
-            if (rawMessageFromEv3 != "") {
-                int idx = rawMessageFromEv3.indexOf("<");
-                if (idx == -1) {  // display raw message if there is no '<'
-                    idx = 0;
-                }
-                messageFromEv3Readable = rawMessageFromEv3.substring(idx);
-
-            }
-            // rawMessageFromEv3 keeps its value, which is ok as we want to keep showing
-            // the last message of the EV3 until a new message arrives.
-            // However, we reset it to "" when the connection to the EV3 is lost.
-            if (!bluetoothStatus.equals("connected")) {
-                rawMessageFromEv3 = "";
-            }
-
-            // If no ev3 cmd, fill in "-" in the feedback string
-            String tmpEv3Cmd;
-            if (ev3Cmd == null) {
-                tmpEv3Cmd = "-";
-            } else {
-                tmpEv3Cmd = ev3Cmd;
-            }
-
-            // Now compose the complete feedback string
-            feedbackString =
-                    "<br>battery level = " + batteryStatus[0] +
-                            "<br>charging = " + batteryStatus[1] +
-                            "<br>wifi strength = " + wifiStrengthPercentage +
-                            "<br>cmd sent to EV3 = " + tmpEv3Cmd +
-                            "<br><b>EV3 status:</b>" +
-                            "<br>bluetooth status = " + bluetoothStatus +
-                            messageFromEv3Readable; // messageFromEv3Readable starts with <br>
-
-            String answerWithFeedback = answer.replace("feedbackstring", feedbackString);
-
-            // Handle html button actions with name 'ev3cmd' and send feedback
-            if (ev3Cmd != null) {
-                // Send the EV3 cmd received from the client to the EV3
-                // Run on UI thread to avoid "Only the original thread that created a view hierarchy can touch its views" error
-                // or "Can't create handler inside thread that has not called Looper.prepare()" error
+            // Handle .html
+            // uri will be "/" for the main page, here index.html.
+            // For other pages (like used in a frameset) the uri will be something like "/index1.html".
+            if (uri.contains(".html") || uri.equals("/")) {
+                Map<String, String> parms = session.getParms();
                 try {
-                    final String ev3CmdFinal = ev3Cmd;
+                    // Open file from SD Card
+                    File root = Environment.getExternalStorageDirectory();
+                    String fileToOpen = "/index.html"; // start page
+                    if (uri.contains(".html")) {
+                        fileToOpen = uri;
+                    }
+                    FileReader index = new FileReader(root.getAbsolutePath() +
+                            "/www" + fileToOpen);
+
+                    BufferedReader reader = new BufferedReader(index);
+                    String line = "";
+                    while ((line = reader.readLine()) != null) {
+                        answer += line;
+                    }
+                    reader.close();
+                } catch (IOException ioe) {
+                    final IOException ioeFinal = ioe;
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            sendEV3Message(ev3CmdFinal);
+                            Toast.makeText(getApplicationContext(), "exception: " + ioeFinal.getMessage(), Toast.LENGTH_LONG).show();
                         }
                     });
-                } catch (Exception e) {
-                    answerWithFeedback = answer.replace("feedback", e.getMessage());
+                    Log.w("Httpd", ioe.toString());
                 }
-                return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
-            }
 
-            // Handle html button actions with name 'servercmd' and send feedback
-            String serverCmd = parms.get("servercmd");
-            if (serverCmd != null) {
-                if (serverCmd.contains("servercmd:connect-ev3")) {
-                    // Get BlueTooth address from the command which are the last 17 characters
-                    String btAddr = serverCmd.substring(serverCmd.length() - 17);
+                // Construct a feedback string to sent back to the client.
+                //
+                // Construct the feedback containing battery level and charging status
+                String[] batteryStatus = new String[2];
+                batteryStatus = getBatteryStatus(getApplicationContext());
+
+                // Construct the feedback containing wifi strength
+                String wifiStrengthPercentage = getWifiStrength(getApplicationContext());
+
+                // Construct the feedback containing the message from the EV3.
+                // Because the raw message contains unknown characters at the start these are removed.
+                // This is done by looking for the '<' character because it is assumed that
+                // the real message part starts with a html <br> character.
+                // This is to be taken care of in the EV3 program!
+                // This way also the name of the EV3 message box is removed.
+                String ev3Cmd = parms.get("ev3cmd");
+                String messageFromEv3Readable = "";
+                if (rawMessageFromEv3 != "") {
+                    int idx = rawMessageFromEv3.indexOf("<");
+                    if (idx == -1) {  // display raw message if there is no '<'
+                        idx = 0;
+                    }
+                    messageFromEv3Readable = rawMessageFromEv3.substring(idx);
+
+                }
+                // rawMessageFromEv3 keeps its value, which is ok as we want to keep showing
+                // the last message of the EV3 until a new message arrives.
+                // However, we reset it to "" when the connection to the EV3 is lost.
+                if (!bluetoothStatus.equals("connected")) {
+                    rawMessageFromEv3 = "";
+                }
+
+                // If no ev3 cmd, fill in "-" in the feedback string
+                String tmpEv3Cmd;
+                if (ev3Cmd == null) {
+                    tmpEv3Cmd = "-";
+                } else {
+                    tmpEv3Cmd = ev3Cmd;
+                }
+
+                // Now compose the complete feedback string
+                feedbackString =
+                        "<br>battery level = " + batteryStatus[0] +
+                                "<br>charging = " + batteryStatus[1] +
+                                "<br>wifi strength = " + wifiStrengthPercentage +
+                                "<br>cmd sent to EV3 = " + tmpEv3Cmd +
+                                "<br><b>EV3 status:</b>" +
+                                "<br>bluetooth status = " + bluetoothStatus +
+                                messageFromEv3Readable; // messageFromEv3Readable starts with <br>
+
+                String answerWithFeedback = answer.replace("feedbackstring", feedbackString);
+
+                // Handle html button actions with name 'ev3cmd' and send feedback
+                if (ev3Cmd != null) {
+                    // Send the EV3 cmd received from the client to the EV3
+                    // Run on UI thread to avoid "Only the original thread that created a view hierarchy can touch its views" error
+                    // or "Can't create handler inside thread that has not called Looper.prepare()" error
                     try {
-                        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(btAddr);
-                        //Attempt to connect to the device
-                        mChatService.connect(device);
-                    } catch (Exception e) {
-                        final String msg = e.getMessage();
+                        final String ev3CmdFinal = ev3Cmd;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(getApplicationContext(), "ecxeption" + msg, Toast.LENGTH_LONG).show();
+                                sendEV3Message(ev3CmdFinal);
+                            }
+                        });
+                    } catch (Exception e) {
+                        final String eFinal = e.getMessage();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplicationContext(), "ecxeption" + eFinal, Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
+                }
+
+                // Handle html button actions with name 'servercmd' and send feedback
+                String serverCmd = parms.get("servercmd");
+                if (serverCmd != null) {
+                    if (serverCmd.contains("cmd:connect-ev3")) {
+                        // Get BlueTooth address from the command which are the last 17 characters
+                        String btAddr = serverCmd.substring(serverCmd.length() - 17);
+                        try {
+                            BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(btAddr);
+                            //Attempt to connect to the device
+                            mChatService.connect(device);
+                        } catch (Exception e) {
+                            final String eFinal = e.getMessage();
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(getApplicationContext(), "ecxeption" + eFinal, Toast.LENGTH_LONG).show();
+                                }
+                            });
+                        }
+                    }
+                    if (serverCmd.equals("cmd:light-on")) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                lightOn();
+                            }
+                        });
+                    } else if (serverCmd.equals("cmd:light-off")) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                lightOff();
                             }
                         });
                     }
                 }
                 return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
             }
-
-            // Refresh
-            return new NanoHTTPD.Response(Response.Status.OK, MIME_HTML, answerWithFeedback);
+            // Should not come here
+            return new NanoHTTPD.Response(Response.Status.OK, MIME_PLAINTEXT, "unsupported MIME type");
         }
     }
 }
