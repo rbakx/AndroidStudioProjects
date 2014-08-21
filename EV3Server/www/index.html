@@ -1,17 +1,29 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">
-<html>
-<head>
-<title>EV3 Control</title>
-</head>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+  <title>EV3 control</title>
+    
+<script language="javascript" type="text/javascript">
+var myIframe = document.getElementById('iframe');
+myIframe.onload = function(){
+    myIframe.contentWindow.scrollTo(0,200);
+};
+
+myIframe.onload();
+</script>
+
+</head><body>
+
+<div style="position: absolute; top: 0px; left: 0px;">
+    <iframe id = "iframr" onload="myIframe.contentWindow.scrollTo(20,0);" src="index1.html" scrolling="yes" height="700" width="400" align="left" frameborder="0"></iframe>
+</div>
+    
+<div style="position: absolute; top: 700px; left: 0px;">
+     <iframe name = "frame2" src="http://192.168.1.119:44445" scrolling="yes" height="400" width="400" frameborder="0"></iframe>
+</div>
+    
+<div style="position: absolute; top: 0px; left: 400px;">
+    <iframe name = "frame3" src="http://192.168.1.119:44445/jsfs.html" scrolling="yes" height="800" width="600" frameborder="0"></iframe>
+</div>
 
 
-<frameset cols="400,*" frameborder="0" border="0" framespacing="0">
-	<frame name="menu" src="index1.html" marginheight="0" marginwidth="0" scrolling="yes" noresize>
-	<frame name="menu" src="index2.html" marginheight="0" marginwidth="0" scrolling="no" noresize>
-
-<noframes>
-<p>no frames supported</p>
-</noframes>
-
-</frameset>
-</html>
+</body></html>

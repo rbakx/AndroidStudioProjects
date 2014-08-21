@@ -99,7 +99,7 @@ public class EV3Server extends Activity {
     private BluetoothAdapter mBluetoothAdapter = null;
     // Member object for the chat services
     private BluetoothChatService mChatService = null;
-
+    private Camera camObject = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -170,6 +170,33 @@ public class EV3Server extends Activity {
         }
     }
 
+    @Override
+    public synchronized void onPause() {
+        super.onPause();
+        if (D) Log.e(TAG, "- ON PAUSE -");
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (D) Log.e(TAG, "-- ON STOP --");
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Stop the Bluetooth chat services
+        if (mChatService != null) mChatService.stop();
+        if (D) Log.e(TAG, "--- ON DESTROY ---");
+        if (server != null)
+            server.stop();
+
+        // Release the camera object
+        if (camObject != null) {
+            camObject.release();
+        }
+    }
+
     private void setupChat() {
         Log.d(TAG, "setupChat()");
 
@@ -220,28 +247,6 @@ public class EV3Server extends Activity {
 
         // Initialize the buffer for outgoing messages
         mOutStringBuffer = new StringBuffer("");
-    }
-
-    @Override
-    public synchronized void onPause() {
-        super.onPause();
-        if (D) Log.e(TAG, "- ON PAUSE -");
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        if (D) Log.e(TAG, "-- ON STOP --");
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        // Stop the Bluetooth chat services
-        if (mChatService != null) mChatService.stop();
-        if (D) Log.e(TAG, "--- ON DESTROY ---");
-        if (server != null)
-            server.stop();
     }
 
     private void ensureDiscoverable() {
@@ -495,15 +500,13 @@ public class EV3Server extends Activity {
         }
     }
 
-    private Camera cam = null;
-
     void lightOn() {
         try {
-            cam = Camera.open();
-            Camera.Parameters p = cam.getParameters();
+            camObject = Camera.open();
+            Camera.Parameters p = camObject.getParameters();
             p.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
-            cam.setParameters(p);
-            cam.startPreview();
+            camObject.setParameters(p);
+            camObject.startPreview();
         } catch (Exception e) {
             final Exception eFinal = e;
             runOnUiThread(new Runnable() {
@@ -517,8 +520,8 @@ public class EV3Server extends Activity {
 
     void lightOff() {
         try {
-            cam.stopPreview();
-            cam.release();
+            camObject.stopPreview();
+            camObject.release();
         } catch (Exception e) {
             final Exception eFinal = e;
             runOnUiThread(new Runnable() {
