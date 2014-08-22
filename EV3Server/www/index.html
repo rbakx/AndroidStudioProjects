@@ -1,29 +1,28 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html><head>
-  <title>EV3 control</title>
-    
-<script language="javascript" type="text/javascript">
-var myIframe = document.getElementById('iframe');
-myIframe.onload = function(){
-    myIframe.contentWindow.scrollTo(0,200);
-};
+<html>
+<head>
+    <title>EV3 control</title>
+</head>
+<body>
+<div style="position: absolute; top: 0px; left: 0px;"> <iframe id="frame1" src="index1.html" align="left" frameborder="0" height="700" scrolling="yes" width="400"></iframe>
+</div>
 
-myIframe.onload();
+<div style="position: absolute; top: 700px; left: 0px;"> <iframe id="frame2" src="" frameborder="0" height="400" scrolling="yes" width="400"></iframe></div>
+
+<div style="position: absolute; top: 0px; left: 400px;"> <iframe id="frame3" src="" frameborder="0" height="800" scrolling="yes" width="600"></iframe></div>
+
+<div style="position: absolute; top: 0px; left: 410px;">
+    <p id="error message"></p>
+</div>
+
+<script> 
+    var urlStr = document.URL;
+    var patt = /:([0-9]+)/;  
+    var res = patt.exec(urlStr);
+    var portNumberPlusOne = (parseInt(res[1]) + 1).toString();
+    var newUrlStr = urlStr.replace(res[1],portNumberPlusOne);
+    document.getElementById("frame2").src = newUrlStr;
+    document.getElementById("frame3").src = newUrlStr + "jsfs.html";
+    document.getElementById("error message").innerHTML = "";
 </script>
-
-</head><body>
-
-<div style="position: absolute; top: 0px; left: 0px;">
-    <iframe id = "iframr" onload="myIframe.contentWindow.scrollTo(20,0);" src="index1.html" scrolling="yes" height="700" width="400" align="left" frameborder="0"></iframe>
-</div>
-    
-<div style="position: absolute; top: 700px; left: 0px;">
-     <iframe name = "frame2" src="http://192.168.1.119:44445" scrolling="yes" height="400" width="400" frameborder="0"></iframe>
-</div>
-    
-<div style="position: absolute; top: 0px; left: 400px;">
-    <iframe name = "frame3" src="http://192.168.1.119:44445/jsfs.html" scrolling="yes" height="800" width="600" frameborder="0"></iframe>
-</div>
-
-
 </body></html>
