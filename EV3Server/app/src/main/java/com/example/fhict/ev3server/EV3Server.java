@@ -659,7 +659,7 @@ public class EV3Server extends Activity {
                     BufferedReader reader = new BufferedReader(index);
                     String line = "";
                     while ((line = reader.readLine()) != null) {
-                        answer += line;
+                        answer += line + "\n";
                     }
                     reader.close();
                 } catch (IOException ioe) {
