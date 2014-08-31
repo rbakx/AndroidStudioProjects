@@ -7,9 +7,7 @@
 <div style="position: absolute; top: 0px; left: 0px;"> <iframe id="frame1" src="index1.html" align="left" frameborder="0" height="700" scrolling="yes" width="400"></iframe>
 </div>
 
-<div style="position: absolute; top: 700px; left: 0px;"> <iframe id="frame2" src="" frameborder="0" height="400" scrolling="yes" width="400"></iframe></div>
-
-<div style="position: absolute; top: 0px; left: 400px;"> <iframe id="frame3" src="" frameborder="0" height="800" scrolling="yes" width="600"></iframe></div>
+<div style="position: absolute; top: 0px; left: 400px;"> <img id="cam" src="" height="600" width="800"></img></div>
 
 <div style="position: absolute; top: 0px; left: 410px;">
     <p id="error message"></p>
@@ -27,8 +25,7 @@
         var res = patt.exec(urlStr);
         var portNumberPlusOne = (parseInt(res[1]) + 1).toString(); // the first parenthesized substring matches is in index 1
         var newUrlStr = urlStr.replace(res[1],portNumberPlusOne);
-        document.getElementById("frame2").src = newUrlStr; // url of the webcam control page
-        document.getElementById("frame3").src = newUrlStr + "jsfs.html"; // url of the webcam video page
+        document.getElementById("cam").src = newUrlStr + "video"; // url of the webcam video page
     } else {
         document.getElementById("error message").innerHTML = "cannot find webcam url"; // write error message the to page
     }
