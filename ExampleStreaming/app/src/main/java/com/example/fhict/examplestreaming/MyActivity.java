@@ -42,6 +42,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.graphics.YuvImage;
 import android.graphics.Rect;
+
 import java.util.Iterator;
 
 
@@ -101,8 +102,8 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                 camera.startPreview();
                 imageFormat = camera.getParameters().getPreviewFormat();
                 previewSize = camera.getParameters().getPreviewSize();
-                previewArea = new Rect(0,0,previewSize.width,previewSize.height);
-                List <int[]> fpsList;
+                previewArea = new Rect(0, 0, previewSize.width, previewSize.height);
+                List<int[]> fpsList;
                 Toast.makeText(getApplicationContext(), "format = " + imageFormat + ", " + previewSize.width + "x" + previewSize.height, Toast.LENGTH_SHORT).show();
 
                 previewing = true;
@@ -140,9 +141,27 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
         previewing = false;
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (camera != null) {
+            camera.stopPreview();
+            camera.release();
+            camera = null;
+            previewing = false;
+        }
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                Log.e("Socket", e.getMessage());
+            }
+        }
+    }
+
     private static DataOutputStream stream;
     private boolean prepared;
-    private Socket socket;
+    private Socket socket = null;
     private static boolean streaming = false;
     private int count = 0;
 
@@ -153,6 +172,9 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
         @Override
         protected Object doInBackground(Object... params) {
             try {
+                if (socket != null) {
+                    socket.close();
+                }
                 ServerSocket server = new ServerSocket(44445);
 
                 socket = server.accept();
@@ -186,15 +208,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                             "--" + boundary + "\r\n").getBytes());
 
                     stream.flush();
-
                     streaming = true;
-                    final String mFinal2 = "set streaming = " + Boolean.toString(streaming);
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(getApplicationContext(), mFinal2, Toast.LENGTH_SHORT).show();
-                        }
-                    });
                 }
             } catch (IOException e) {
                 Log.e(TAG, e.getMessage());
@@ -206,6 +220,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                     }
                 });
             }
+            new SocketTask().execute();
             return null;
         }
 
