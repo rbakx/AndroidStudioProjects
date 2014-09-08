@@ -3,7 +3,6 @@ package com.example.fhict.examplestreaming;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -83,20 +82,12 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
     public void surfaceChanged(SurfaceHolder holder, int format, int width,
                                int height) {
         // TODO Auto-generated method stub
-        if (previewing) {
-            camera.stopPreview();
-            previewing = false;
-        }
-
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(getApplicationContext(), "surface change", Toast.LENGTH_SHORT).show();
+        try {
+            if (previewing) {
+                camera.stopPreview();
+                previewing = false;
             }
-        });
-
-        if (camera != null) {
-            try {
+            if (camera != null) {
                 camera.setPreviewDisplay(surfaceHolder);
                 camera.setPreviewCallback(MyActivity.this);
                 camera.startPreview();
@@ -108,15 +99,9 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
 
                 previewing = true;
 
-            } catch (IOException e) {
-                final String eFinal = e.getMessage();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(getApplicationContext(), "exception2: " + eFinal, Toast.LENGTH_LONG).show();
-                    }
-                });
             }
+        } catch (Exception e) {
+            Log.e("surfaceChanged", e.getMessage());
         }
     }
 
@@ -124,38 +109,39 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
     public void surfaceCreated(SurfaceHolder holder) {
         // TODO Auto-generated method stub
         camera = Camera.open();
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(getApplicationContext(), "surface create", Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         // TODO Auto-generated method stub
-        camera.stopPreview();
-        camera.release();
-        camera = null;
-        previewing = false;
+        try {
+            if (camera != null) {
+                camera.stopPreview();
+                camera.release();
+                camera = null;
+                previewing = false;
+            }
+        } catch (Exception e) {
+            Log.e("surfaceDestroyed", e.getMessage());
+        }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (camera != null) {
-            camera.stopPreview();
-            camera.release();
-            camera = null;
-            previewing = false;
-        }
-        if (socket != null) {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                Log.e("Socket", e.getMessage());
+        try {
+            streaming = false;
+            if (camera != null) {
+                camera.stopPreview();
+                camera.release();
+                camera = null;
+                previewing = false;
             }
+            if (socket != null) {
+                socket.close();
+            }
+        } catch (Exception e) {
+            Log.e("onDestroy", e.getMessage());
         }
     }
 
@@ -210,13 +196,13 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                     stream.flush();
                     streaming = true;
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 Log.e(TAG, e.getMessage());
                 final String eFinal = e.getMessage();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getApplicationContext(), "exception3: " + eFinal, Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "exception: " + eFinal, Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -237,16 +223,9 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
         try {
             if (streaming) {
                 mHandler.post(this);
-                //run();
             }
         } catch (Exception e) {
-            final String eFinal = e.getMessage();
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(getApplicationContext(), "exception4: " + eFinal, Toast.LENGTH_LONG).show();
-                }
-            });
+            Toast.makeText(getApplicationContext(), "exception: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -271,7 +250,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                     break;
 
                 default:
-                    throw new IOException("Error while encoding: unsupported image format");
+                    throw new Exception("Error while encoding: unsupported image format");
             }
 
             buffer.flush();
@@ -283,17 +262,10 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                     "\r\n").getBytes());
 
             if (count % 100 == 0) {
-                final String mFinal = "streaming!!!";
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(getApplicationContext(), mFinal, Toast.LENGTH_SHORT).show();
-                    }
-                });
+                Toast.makeText(getApplicationContext(), "streaming!!!", Toast.LENGTH_SHORT).show();
                 count = 0;
             }
             count = count + 1;
-
 
             buffer.writeTo(stream);
             stream.write(("\r\n--" + boundary + "\r\n").getBytes());
@@ -303,13 +275,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
 //	        stop();
 //	        notifyOnEncoderError(this, e.getMessage());
             streaming = false;
-            final String eFinal = e.getMessage();
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(getApplicationContext(), "exception5: " + eFinal, Toast.LENGTH_LONG).show();
-                }
-            });
+            Toast.makeText(getApplicationContext(), "exception: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 }
