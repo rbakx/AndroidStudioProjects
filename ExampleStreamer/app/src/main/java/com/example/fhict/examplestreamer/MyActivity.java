@@ -1,48 +1,25 @@
-package com.example.fhict.examplestreaming;
+package com.example.fhict.examplestreamer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
-import java.util.Random;
 
 import android.app.Activity;
-import android.content.ContentValues;
-import android.content.Context;
 import android.content.pm.ActivityInfo;
-import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ImageFormat;
-import android.graphics.Paint;
-import android.graphics.PixelFormat;
 import android.hardware.Camera;
-import android.hardware.Camera.AutoFocusCallback;
-import android.hardware.Camera.PictureCallback;
-import android.hardware.Camera.ShutterCallback;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.MediaStore.Images.Media;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
-import android.view.ViewGroup.LayoutParams;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
-import android.os.Handler;
 import android.os.Looper;
 import android.graphics.YuvImage;
 import android.graphics.Rect;
-
-import java.util.Iterator;
 
 
 public class MyActivity extends Activity implements SurfaceHolder.Callback, Camera.PreviewCallback, Runnable {
@@ -56,6 +33,8 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
     int imageFormat;
     Camera.Size previewSize;
     Rect previewArea;
+
+    private SocketTask mSocketTask = null;
 
     /**
      * Called when the activity is first created.
@@ -72,7 +51,8 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
             surfaceHolder.addCallback(this);
             surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
-            new SocketTask().execute();
+            mSocketTask = new SocketTask();
+            mSocketTask.execute();
         } catch (Exception e) {
             Toast.makeText(getApplicationContext(), "exception1: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
@@ -114,16 +94,6 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         // TODO Auto-generated method stub
-        try {
-            if (camera != null) {
-                camera.stopPreview();
-                camera.release();
-                camera = null;
-                previewing = false;
-            }
-        } catch (Exception e) {
-            Log.e("surfaceDestroyed", e.getMessage());
-        }
     }
 
     @Override
@@ -131,8 +101,10 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
         super.onDestroy();
         try {
             streaming = false;
+
             if (camera != null) {
                 camera.stopPreview();
+                camera.setPreviewCallback(null);
                 camera.release();
                 camera = null;
                 previewing = false;
@@ -145,11 +117,9 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
         }
     }
 
-    private static DataOutputStream stream;
-    private boolean prepared;
-    private Socket socket = null;
     private static boolean streaming = false;
-    private int count = 0;
+    private static DataOutputStream stream;
+    private Socket socket = null;
 
     private class SocketTask extends AsyncTask {
 
@@ -177,7 +147,6 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                 });
 
                 stream = new DataOutputStream(socket.getOutputStream());
-                prepared = true;
 
                 if (stream != null) {
                     // send the header
@@ -206,7 +175,8 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                     }
                 });
             }
-            new SocketTask().execute();
+            mSocketTask = new SocketTask();
+            mSocketTask.execute();
             return null;
         }
 
@@ -230,6 +200,8 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
     }
 
     String boundary = boundary = "---------------------------7da24f2e50046";
+
+    private int count = 0;
 
     @Override
     public void run() {

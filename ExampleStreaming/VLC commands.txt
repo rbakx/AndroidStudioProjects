@@ -1,6 +1,0 @@
-
-/Applications/VLC.app/Contents/MacOS/VLC -vvv /Users/reneb/ReneB/VLCtest/nao.mp4 --sout '#rtp{dst=192.168.1.107,port=1234,sdp=http://192.168.1.107:8080/test.sdp}'
-
-/Applications/VLC.app/Contents/MacOS/VLC http://192.168.1.107:8080/test.sdp
-
-/Applications/VLC.app/Contents/MacOS/VLC -vvv qtcapture://0x2440000005ac8507 --sout '#transcode{vcodec=MJPG}:standard{mux=mpjpeg,dst=192.168.1.107:1234/video,access=http}' --sout-http-mime="multipart/x-mixed-replace;boundary=--7b3cc56e5f51db803f790dad720ed50a"
