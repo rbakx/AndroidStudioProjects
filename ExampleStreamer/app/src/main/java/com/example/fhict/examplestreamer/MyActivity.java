@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.List;
 
 import android.app.Activity;
@@ -24,10 +25,14 @@ import android.graphics.Rect;
 
 public class MyActivity extends Activity implements SurfaceHolder.Callback, Camera.PreviewCallback, Runnable {
 
+    private  boolean previewing = false;
+    private  boolean streaming = false;
+    private  DataOutputStream stream;
+    private  Socket socket = null;
+
     Camera camera;
     SurfaceView surfaceView;
     SurfaceHolder surfaceHolder;
-    boolean previewing = false;
 
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     int imageFormat;
@@ -41,6 +46,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
      */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.e("ReneBlog", "OnCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_my);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -50,18 +56,30 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
             surfaceHolder = surfaceView.getHolder();
             surfaceHolder.addCallback(this);
             surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        } catch (Exception e) {
+            Log.e("exception onCreate: ", e.getMessage());
+            Toast.makeText(getApplicationContext(), "exception: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
 
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        Log.e("ReneBlog", "surfaceCreated");
+        try {
+            camera = Camera.open();
             mSocketTask = new SocketTask();
             mSocketTask.execute();
         } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), "exception1: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.e("exception surfaceCreated: ", e.getMessage());
+            Toast.makeText(getApplicationContext(), "exception: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width,
                                int height) {
-        // TODO Auto-generated method stub
+        Log.e("ReneBlog", "surfaceChanged");
         try {
             if (previewing) {
                 camera.stopPreview();
@@ -81,23 +99,34 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
 
             }
         } catch (Exception e) {
-            Log.e("surfaceChanged", e.getMessage());
+            Log.e("exception surfaceChanged: ", e.getMessage());
         }
     }
 
     @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        // TODO Auto-generated method stub
-        camera = Camera.open();
-    }
-
-    @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        // TODO Auto-generated method stub
+        Log.e("ReneBlog", "surfaceDestroyed");
+        try {
+            streaming = false;
+
+            if (camera != null) {
+                camera.stopPreview();
+                camera.setPreviewCallback(null);
+                camera.release();
+                camera = null;
+                previewing = false;
+            }
+            if (socket != null) {
+                socket.close();
+            }
+        } catch (Exception e) {
+            Log.e("exception surfaceDestroyed: ", e.getMessage());
+        }
     }
 
     @Override
     public void onDestroy() {
+        Log.e("ReneBlog", "onDestroy");
         super.onDestroy();
         try {
             streaming = false;
@@ -113,28 +142,39 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                 socket.close();
             }
         } catch (Exception e) {
-            Log.e("onDestroy", e.getMessage());
+            Log.e("exception onDestroy: ", e.getMessage());
         }
     }
 
-    private static boolean streaming = false;
-    private static DataOutputStream stream;
-    private Socket socket = null;
-
     private class SocketTask extends AsyncTask {
-
         private static final String TAG = "StreamTASK";
 
         @Override
         protected Object doInBackground(Object... params) {
+            Log.e("ReneBlog", "SocketTask");
             try {
-                if (socket != null) {
-                    socket.close();
-                }
+                boolean doAgain = true;
+
                 ServerSocket server = new ServerSocket(44445);
 
-                socket = server.accept();
-
+                while (doAgain == true) {
+                    // Set timeout to be able to check on activity stopped.
+                    server.setSoTimeout(1000);
+                    try {
+                        // server.accept is blocking, it returns when either a connection request
+                        // is received, or after the timeout set.
+                        // In case a connection request is received, we break out of the while loop.
+                        // In case of a timeout, we remain looping, but check if the activity
+                        // is still running. If not, we stop this backgound thread.
+                        socket = server.accept();
+                        break;
+                    } catch (SocketTimeoutException e) {
+                        if (previewing == false) { // activity has stopped, return
+                            server.close();
+                            return null;
+                        }
+                    }
+                }
                 server.close();
 
                 Log.i(TAG, "New connection to :" + socket.getInetAddress());
@@ -166,15 +206,16 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                     streaming = true;
                 }
             } catch (Exception e) {
-                Log.e(TAG, e.getMessage());
+                Log.e("exception doInBackground: ", e.getMessage());
                 final String eFinal = e.getMessage();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getApplicationContext(), "exception: " + eFinal, Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "exception: " + eFinal, Toast.LENGTH_SHORT).show();
                     }
                 });
             }
+            // Call this background task again to wait for the next socket connection request.
             mSocketTask = new SocketTask();
             mSocketTask.execute();
             return null;
@@ -195,18 +236,21 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                 mHandler.post(this);
             }
         } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), "exception: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.e("exception onPreviewFrame: ", e.getMessage());
+            Toast.makeText(getApplicationContext(), "exception6: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
     String boundary = boundary = "---------------------------7da24f2e50046";
 
-    private int count = 0;
-
     @Override
     public void run() {
         // TODO: cache not filling?
         try {
+            // Check if activity is still active.
+            if (previewing == false) {
+                return;
+            }
             buffer.reset();
 
             switch (imageFormat) {
@@ -233,21 +277,14 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                     "X-Timestamp:" + System.currentTimeMillis() + "\r\n" +
                     "\r\n").getBytes());
 
-            if (count % 100 == 0) {
-                Toast.makeText(getApplicationContext(), "streaming!!!", Toast.LENGTH_SHORT).show();
-                count = 0;
-            }
-            count = count + 1;
 
             buffer.writeTo(stream);
             stream.write(("\r\n--" + boundary + "\r\n").getBytes());
             stream.flush();
-            Log.e("WriteStream", "Writing to stream");
         } catch (Exception e) {
-//	        stop();
-//	        notifyOnEncoderError(this, e.getMessage());
+            Log.e("exception run: ", e.getMessage());
             streaming = false;
-            Toast.makeText(getApplicationContext(), "exception: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "exception: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 }
