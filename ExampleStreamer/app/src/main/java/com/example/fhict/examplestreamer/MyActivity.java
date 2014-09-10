@@ -25,10 +25,10 @@ import android.graphics.Rect;
 
 public class MyActivity extends Activity implements SurfaceHolder.Callback, Camera.PreviewCallback, Runnable {
 
-    private  boolean previewing = false;
-    private  boolean streaming = false;
-    private  DataOutputStream stream;
-    private  Socket socket = null;
+    private boolean previewing = false;
+    private boolean streaming = false;
+    private DataOutputStream stream;
+    private Socket socket = null;
 
     Camera camera;
     SurfaceView surfaceView;
