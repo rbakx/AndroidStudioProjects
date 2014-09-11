@@ -46,7 +46,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
      */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.e("ReneBlog", "OnCreate");
+        Log.i("ReneBlog", "OnCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_my);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -64,7 +64,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        Log.e("ReneBlog", "surfaceCreated");
+        Log.i("ReneBlog", "surfaceCreated");
         try {
             camera = Camera.open();
             mSocketTask = new SocketTask();
@@ -79,7 +79,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width,
                                int height) {
-        Log.e("ReneBlog", "surfaceChanged");
+        Log.i("ReneBlog", "surfaceChanged");
         try {
             if (previewing) {
                 camera.stopPreview();
@@ -105,7 +105,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.e("ReneBlog", "surfaceDestroyed");
+        Log.i("ReneBlog", "surfaceDestroyed");
         try {
             streaming = false;
 
@@ -126,7 +126,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
 
     @Override
     public void onDestroy() {
-        Log.e("ReneBlog", "onDestroy");
+        Log.i("ReneBlog", "onDestroy");
         super.onDestroy();
         try {
             streaming = false;
@@ -147,11 +147,9 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
     }
 
     private class SocketTask extends AsyncTask {
-        private static final String TAG = "StreamTASK";
-
         @Override
         protected Object doInBackground(Object... params) {
-            Log.e("ReneBlog", "SocketTask");
+            Log.i("ReneBlog", "SocketTask");
             try {
                 boolean doAgain = true;
 
@@ -177,7 +175,7 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
                 }
                 server.close();
 
-                Log.i(TAG, "New connection to :" + socket.getInetAddress());
+                Log.i("ReneBlog", "New connection to :" + socket.getInetAddress());
                 final String mFinal1 = "New connection to :" + socket.getInetAddress();
                 runOnUiThread(new Runnable() {
                     @Override
@@ -241,11 +239,10 @@ public class MyActivity extends Activity implements SurfaceHolder.Callback, Came
         }
     }
 
-    String boundary = boundary = "---------------------------7da24f2e50046";
+    String boundary = boundary = "998856e5f51dbhello90dad7209988";
 
     @Override
     public void run() {
-        // TODO: cache not filling?
         try {
             // Check if activity is still active.
             if (previewing == false) {
